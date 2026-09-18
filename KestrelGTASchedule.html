@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Club Hub</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        /* Map Styles */
+        .map-container {
+            width: 100%;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #dadce0;
+            background-color: #e5e3df; 
+            max-height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .map-container img { width: 100%; height: auto; display: block; object-fit: cover; }
+
+        h3 { font-size: 1.15em; margin-bottom: 15px; border-bottom: 2px solid #f1f3f4; padding-bottom: 8px; margin-top: 30px; color: #202124; }
+        
+        /* Multi-Select Location Toggles */
+        .location-toggles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .loc-toggle {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 2px solid #dadce0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            color: #5f6368;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .loc-toggle:hover { background: #f1f3f4; }
+        
+        /* Active States & Color Coding */
+        .loc-toggle.active.toggle-flambeau { border-color: #e91e63; background: #fce4ec; color: #c2185b; }
+        .loc-toggle.active.toggle-creditValley { border-color: #2196f3; background: #e3f2fd; color: #1565c0; }
+        .loc-toggle.active.toggle-churchill { border-color: #4caf50; background: #e8f5e9; color: #2e7d32; }
+
+        /* Legacy Location Display Style */
+        .location-details-container { margin-bottom: 25px; }
+        .loc-detail-header {
+            margin: 20px 0 5px 0;
+            color: #1a73e8;
+            font-size: 1.7em;
+            font-weight: bold;
+        }
+        .loc-detail-address {
+            color: #5f6368;
+            font-size: 0.95em;
+            margin-bottom: 10px;
+        }
+
+        /* Controls */
+        label { font-weight: 600; display: block; margin-bottom: 8px; color: #3c4043; }
+        input[type="date"], button.check-btn {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border: 1px solid #dadce0; border-radius: 6px;
+            font-size: 16px; box-sizing: border-box;
+        }
+        button.check-btn { background-color: #1a73e8; color: white; border: none; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        button.check-btn:hover { background-color: #1557b0; }
+        
+        #result { padding: 15px; border-radius: 6px; font-size: 0.95em; display: none; margin-bottom: 15px; background: #f8f9fa; border: 1px solid #eee; }
+        .result-item { padding: 8px; border-bottom: 1px solid #eee; }
+        .result-item:last-child { border-bottom: none; }
+
+        /* Calendar Grid Shared Styles */
+        .calendar-wrapper { overflow-x: auto; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; min-width: 650px; }
+        .grid-header { text-align: center; font-weight: 600; color: #5f6368; padding: 8px 0; font-size: 0.85em; text-transform: uppercase; }
+        
+        .day {
+            padding: 8px 4px; text-align: center; border-radius: 6px;
+            display: flex; flex-direction: column; gap: 4px;
+            min-height: 55px; justify-content: flex-start;
+            background-color: #f1f3f4; border: 1px solid #dadce0;
+        }
+        .day.empty { background-color: transparent; border: none; }
+        .day.available { background-color: #fff; border-color: #ceead6; }
+        .day .date-str { font-weight: bold; font-size: 1em; color: #333; margin-bottom: 2px; }
+        
+        /* Location Tags inside Calendar */
+        .tags-container { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+        .loc-tag {
+            font-size: 0.7em; padding: 3px 4px; border-radius: 4px; color: #fff; font-weight: 600; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .tag-flambeau { background-color: #e91e63; }
+        .tag-creditValley { background-color: #2196f3; }
+        .tag-churchill { background-color: #4caf50; }
+
+        /* Full Season Calendar Grid */
+        .month-block { margin-bottom: 30px; }
+        .month-title { font-size: 1.1em; color: #1a73e8; margin-bottom: 10px; text-align: center; font-weight: bold; }
+        
+        .no-selection-msg { text-align: center; color: #666; font-style: italic; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Static Map Image -->
+    <div class="map-container">
+        <img src="schoolmap.jpg" alt="Map of Badminton Locations">
+    </div>
+
+    <!-- Multi-Select Icons -->
+    <label>Select Locations to View:</label>
+    <div class="location-toggles">
+        <button class="loc-toggle toggle-flambeau active" onclick="toggleLocation('flambeau')" id="btn-flambeau">
+            🔴 Flambeau
+        </button>
+        <button class="loc-toggle toggle-creditValley" onclick="toggleLocation('creditValley')" id="btn-creditValley">
+            🔵 Credit Valley
+        </button>
+        <button class="loc-toggle toggle-churchill" onclick="toggleLocation('churchill')" id="btn-churchill">
+            🟢 Churchill
+        </button>
+    </div>
+
+    <!-- Active Location Details Container (Reverted Style) -->
+    <div id="activeLocationDetails" class="location-details-container">
+        <!-- Dynamically injected full names and addresses -->
+    </div>
+
+    <!-- 2-Week Calendar -->
+    <h3>This Week & Next Week</h3>
+    <div class="calendar-wrapper">
+        <div class="grid" id="twoWeekGrid">
+            <div class="grid-header">Mon</div>
+            <div class="grid-header">Tue</div>
+            <div class="grid-header">Wed</div>
+            <div class="grid-header">Thu</div>
+            <div class="grid-header">Fri</div>
+            <div class="grid-header">Sat</div>
+            <div class="grid-header">Sun</div>
+            <!-- Dynamic 14-day calendar injected here -->
+        </div>
+    </div>
+
+    <!-- Future Date Lookup -->
+    <h3>Check a Specific Date</h3>
+    <input type="date" id="datePicker">
+    <button class="check-btn" onclick="checkManualStatus()">Check Availability</button>
+    <div id="result"></div>
+
+    <!-- Complete Season Calendar -->
+    <h3>Complete Season Schedule</h3>
+    <div id="fullSeasonContainer">
+        <!-- Dynamic Month Grids Injected Here -->
+    </div>
+</div>
+
+<script>
+    const locationData = {
+        flambeau: {
+            id: "flambeau",
+            name: "Flambeau",
+            fullName: "Le Flambeau Elementary School",
+            address: "📍 600 Novo Star Dr, Mississauga, ON L5W 1G4",
+            startDate: "2026-09-14",
+            endDate: "2027-06-23",
+            schedule: { 1: "18:00-21:00", 2: "18:00-21:00", 3: "18:00-21:00" },
+            cancelled: [
+                "2026-10-12", "2026-10-26", "2026-12-21", "2026-12-22", "2026-12-23", 
+                "2026-12-28", "2026-12-29", "2026-12-30", "2027-02-15", 
+                "2027-03-15", "2027-03-16", "2027-03-17", "2027-03-29"
+            ]
+        },
+        creditValley: {
+            id: "creditValley",
+            name: "Credit Valley",
+            fullName: "Credit Valley Public School",
+            address: "📍 2365 Credit Valley Rd, Mississauga, ON L5M 4E8",
+            startDate: "2026-09-21", 
+            endDate: "2027-06-02",   
+            schedule: { 1: "18:00-22:00", 2: "20:00-22:00", 3: "18:00-22:00", 5: "18:00-20:00" },
+            cancelled: [
+                "2026-10-12", "2026-12-18", "2026-12-21", "2026-12-22", "2026-12-23", 
+                "2026-12-25", "2026-12-28", "2026-12-29", "2026-12-30", "2027-01-01", 
+                "2027-01-06", "2027-02-10", "2027-02-15", "2027-03-15", "2027-03-16", 
+                "2027-03-17", "2027-03-19", "2027-03-26", "2027-05-24"
+            ]
+        },
+        churchill: {
+            id: "churchill",
+            name: "Churchill",
+            fullName: "Churchill Meadows P.S.",
+            address: "📍 3310 McDowell Dr, Mississauga, ON L5M 6S1",
+            startDate: "2026-09-22",
+            endDate: "2027-06-04",
+            schedule: { 2: "20:00-22:00", 5: "18:00-20:00" },
+            cancelled: [
+                "2026-12-18", "2026-12-22", "2026-12-25", "2026-12-29", 
+                "2027-01-01", "2027-03-16", "2027-03-19", "2027-03-26"
+            ]
+        }
+    };
+
+    let activeLocations = new Set(['flambeau']);
+
+    function toggleLocation(locId) {
+        const btn = document.getElementById(`btn-${locId}`);
+        if (activeLocations.has(locId)) {
+            activeLocations.delete(locId);
+            btn.classList.remove('active');
+        } else {
+            activeLocations.add(locId);
+            btn.classList.add('active');
+        }
+        
+        document.getElementById("result").style.display = "none";
+        renderAll();
+    }
+
+    function renderActiveLocationDetails() {
+        const container = document.getElementById("activeLocationDetails");
+        if (activeLocations.size === 0) {
+            container.innerHTML = "";
+            return;
+        }
+
+        let html = "";
+        activeLocations.forEach(id => {
+            const loc = locationData[id];
+            html += `
+                <div>
+                    <h2 class="loc-detail-header">${loc.fullName}</h2>
+                    <div class="loc-detail-address">${loc.address}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function formatDateString(dateObj) {
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function getAggregatedDayStatus(dateString) {
+        let openLocations = [];
+
+        activeLocations.forEach(locId => {
+            const loc = locationData[locId];
+            if (dateString >= loc.startDate && dateString <= loc.endDate) {
+                const dateObj = new Date(dateString + "T12:00:00"); 
+                const dayOfWeek = dateObj.getDay(); 
+                
+                if (!loc.cancelled.includes(dateString) && loc.schedule[dayOfWeek]) {
+                    openLocations.push({ id: locId, name: loc.name, hours: loc.schedule[dayOfWeek] });
+                }
+            }
+        });
+
+        if (openLocations.length > 0) {
+            return { status: "available", openLocations: openLocations };
+        } else {
+            return { status: "closed", openLocations: [] };
+        }
+    }
+
+    function createDayElement(dateObj, dateStr, isTodayCheck = false) {
+        const aggregatedStatus = getAggregatedDayStatus(dateStr);
+        const dayDiv = document.createElement("div");
+        dayDiv.className = `day ${aggregatedStatus.status}`;
+        
+        const displayDate = dateObj.getDate();
+        const todayStr = (isTodayCheck && dateObj.toDateString() === new Date().toDateString()) ? '📍 ' : '';
+        
+        let html = `<span class="date-str">${todayStr}${displayDate}</span>`;
+        
+        if (aggregatedStatus.status === "available") {
+            html += `<div class="tags-container">`;
+            aggregatedStatus.openLocations.forEach(loc => {
+                html += `<div class="loc-tag tag-${loc.id}" title="${loc.fullName}: ${loc.hours}">${loc.hours}</div>`;
+            });
+            html += `</div>`;
+        }
+
+        dayDiv.innerHTML = html;
+        return dayDiv;
+    }
+
+    function renderAll() {
+        renderActiveLocationDetails();
+        generateTwoWeekCalendar();
+        generateCompleteSchedule();
+    }
+
+    function generateTwoWeekCalendar() {
+        const grid = document.getElementById("twoWeekGrid");
+        while (grid.children.length > 7) grid.removeChild(grid.lastChild); 
+
+        if (activeLocations.size === 0) return; 
+
+        const today = new Date();
+        today.setHours(12,0,0,0);
+        const dayOfWeek = today.getDay(); 
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
+        
+        const thisMonday = new Date(today);
+        thisMonday.setDate(today.getDate() - daysToMonday);
+        
+        for (let i = 0; i < 14; i++) {
+            const currentDate = new Date(thisMonday);
+            currentDate.setDate(thisMonday.getDate() + i);
+            grid.appendChild(createDayElement(currentDate, formatDateString(currentDate), true));
+        }
+    }
+
+    function generateCompleteSchedule() {
+        const container = document.getElementById("fullSeasonContainer");
+        container.innerHTML = ""; 
+        
+        if (activeLocations.size === 0) {
+            container.innerHTML = "<div class='no-selection-msg'>Please select at least one location above to view the schedule.</div>";
+            return;
+        }
+
+        let minStart = "9999-12-31";
+        let maxEnd = "0000-01-01";
+        activeLocations.forEach(id => {
+            if (locationData[id].startDate < minStart) minStart = locationData[id].startDate;
+            if (locationData[id].endDate > maxEnd) maxEnd = locationData[id].endDate;
+        });
+
+        const start = new Date(minStart + "T12:00:00");
+        const end = new Date(maxEnd + "T12:00:00");
+        
+        let currentMonth = start.getMonth();
+        let currentYear = start.getFullYear();
+        
+        while (currentYear < end.getFullYear() || (currentYear === end.getFullYear() && currentMonth <= end.getMonth())) {
+            
+            const monthBlock = document.createElement("div");
+            monthBlock.className = "month-block";
+            
+            const monthTitle = document.createElement("div");
+            monthTitle.className = "month-title";
+            const monthDate = new Date(currentYear, currentMonth, 1, 12, 0, 0);
+            monthTitle.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            monthBlock.appendChild(monthTitle);
+            
+            const gridWrapper = document.createElement("div");
+            gridWrapper.className = "calendar-wrapper";
+            
+            const grid = document.createElement("div");
+            grid.className = "grid";
+            grid.innerHTML = `
+                <div class="grid-header">Mon</div><div class="grid-header">Tue</div>
+                <div class="grid-header">Wed</div><div class="grid-header">Thu</div>
+                <div class="grid-header">Fri</div><div class="grid-header">Sat</div>
+                <div class="grid-header">Sun</div>
+            `;
+            
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1, 12, 0, 0);
+            let startDayOfWeek = firstDayOfMonth.getDay(); 
+            let emptyDays = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+            
+            for (let i = 0; i < emptyDays; i++) {
+                const emptyDiv = document.createElement("div");
+                emptyDiv.className = "day empty";
+                grid.appendChild(emptyDiv);
+            }
+            
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const iterDate = new Date(currentYear, currentMonth, d, 12, 0, 0);
+                grid.appendChild(createDayElement(iterDate, formatDateString(iterDate), false));
+            }
+            
+            gridWrapper.appendChild(grid);
+            monthBlock.appendChild(gridWrapper);
+            container.appendChild(monthBlock);
+            
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+        }
+    }
+
+    function checkManualStatus() {
+        const dateInput = document.getElementById("datePicker").value;
+        const resultDiv = document.getElementById("result");
+        
+        if (!dateInput) return alert("Please select a date first.");
+        if (activeLocations.size === 0) return alert("Please toggle at least one location on.");
+
+        let outputHtml = "";
+        
+        activeLocations.forEach(locId => {
+            const loc = locationData[locId];
+            let statusText = "";
+            let icon = "❌";
+
+            if (dateInput < loc.startDate || dateInput > loc.endDate) {
+                statusText = "Out of Season";
+            } else {
+                const dateObj = new Date(dateInput + "T12:00:00"); 
+                const dayOfWeek = dateObj.getDay(); 
+                
+                if (loc.cancelled.includes(dateInput)) {
+                    statusText = "Scheduled Cancellation";
+                } else if (loc.schedule[dayOfWeek]) {
+                    statusText = `Open (${loc.schedule[dayOfWeek]})`;
+                    icon = "✅";
+                } else {
+                    statusText = "Closed (No normal operations)";
+                }
+            }
+            
+            outputHtml += `<div class="result-item"><strong>${icon} ${loc.fullName}:</strong> ${statusText}</div>`;
+        });
+
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = outputHtml;
+    }
+
+    window.onload = renderAll;
+</script>
+</body>
+</html>
